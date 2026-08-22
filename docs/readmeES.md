@@ -470,4 +470,4 @@ Esto importa más que la lista de features.
 
 ## Licencia
 
-Apache-2.0. Ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
+Apache-2.0. Ver [LICENSE](../LICENSE) y [NOTICE](../NOTICE).
