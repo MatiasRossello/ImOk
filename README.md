@@ -8,7 +8,7 @@ cruzado. Si te quedás sin batería, sin señal o sin máquina, el mensaje sigue
 viajando: lo llevan los otros.
 
 ```
-pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko
+pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto
 ```
 
 Construido para el Aleph Hackathon 2026 · Pears Track, a partir del template
@@ -106,7 +106,7 @@ En una máquina que nunca vio este repo:
 
 ```sh
 curl https://install.pears.com/pear.sh | sh
-pear install pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko
+pear install pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto
 imok
 ```
 
@@ -114,8 +114,8 @@ imok
 que tiene el drive completo). **Requiere que haya un `pear seed` vivo del otro
 lado**: sin un peer sirviendo el drive no hay de dónde bajar.
 
-Plataformas publicadas: `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`,
-`win32-x64`. No `win32-arm64`.
+Plataformas publicadas: las seis — `darwin-arm64`, `darwin-x64`, `linux-arm64`,
+`linux-x64`, `win32-x64`, `win32-arm64`.
 
 ### Desde el repo
 
@@ -431,10 +431,11 @@ pear build --target /tmp/pear-deploy --package ./package.json \
   --darwin-x64-app   ./out/darwin-x64/imok \
   --linux-arm64-app  ./out/linux-arm64/imok \
   --linux-x64-app    ./out/linux-x64/imok \
-  --win32-x64-app    ./out/win32-x64/imok.exe
+  --win32-x64-app    ./out/win32-x64/imok.exe \
+  --win32-arm64-app  ./out/win32-arm64/imok.exe
 
-pear stage pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko /tmp/pear-deploy
-pear seed  pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko   # tiene que quedar corriendo
+pear stage pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto /tmp/pear-deploy
+pear seed  pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto   # tiene que quedar corriendo
 ```
 
 Pear 3.2.0 no tiene `pear release`. `pear build` + `pear stage` + un `pear seed`
@@ -462,7 +463,6 @@ Esto importa más que la lista de features.
 - **TTL de 72 h.** Después de eso el mensaje se purga en todos lados.
 - **Bluetooth solo en macOS, iOS y Android**, que es lo que `bare-bluetooth`
   bindea. En el resto la app corre igual y se cae a Hyperswarm en silencio.
-- **`win32-arm64` no está publicado.**
 
 ## Licencia
 
