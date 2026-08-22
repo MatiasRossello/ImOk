@@ -1,0 +1,5 @@
+require('./identity.test.js')
+require('./message.test.js')
+require('./store.test.js')
+require('./sync.test.js')
+require('./forward.test.js')
