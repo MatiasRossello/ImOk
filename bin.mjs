@@ -66,6 +66,7 @@ const relay = command(
   flag('--foreground', 'run the relay here instead of reporting on it').hide(),
   flag('--detached', 'log to relay.log instead of this terminal').hide(),
   flag('--no-swarm', 'run the relay without joining the network').hide(),
+  flag('--no-ble', 'run the relay without Bluetooth').hide(),
   flag('--say <note>', 'publish a note before relaying').hide(),
   ...common(),
   (cmd) => { run = () => relayCommand(cmd) }
@@ -211,6 +212,7 @@ async function foregroundRelay (cmd) {
     node = await runRelay(dir, {
       log,
       swarm: cmd.flags.swarm !== false,
+      bluetooth: cmd.flags.ble !== false,
       say: cmd.flags.say ?? null
     })
   } catch (err) {

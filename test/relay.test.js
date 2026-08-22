@@ -19,7 +19,7 @@ function spawnOpts () {
   return {
     execPath: os.execPath(),
     entrypoint: isDev ? ENTRY : null,
-    args: ['--no-swarm'],
+    args: ['--no-swarm', '--no-ble'],
     timeout: 15000
   }
 }

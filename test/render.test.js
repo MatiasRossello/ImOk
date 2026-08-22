@@ -138,9 +138,21 @@ test('a relay that holds the store without answering is reported, not papered ov
   t.ok(stuck.includes('imok relay --stop'), 'gives a way out')
 })
 
+// lib has subdirectories now, and a transport is exactly the kind of file
+// that grows a "sent" in a log line.
+function sources (dir) {
+  const out = []
+  for (const entry of fs.readdirSync(dir)) {
+    const full = path.join(dir, entry)
+    if (fs.statSync(full).isDirectory()) out.push(...sources(full))
+    else if (full.endsWith('.js')) out.push(full)
+  }
+  return out
+}
+
 test('no interface string in the source promises delivery', (t) => {
   const root = path.join(__dirname, '..')
-  const files = ['bin.mjs', ...fs.readdirSync(path.join(root, 'lib')).map((f) => path.join('lib', f))]
+  const files = ['bin.mjs', ...sources(path.join(root, 'lib')).map((f) => path.relative(root, f))]
   for (const file of files) {
     const source = fs.readFileSync(path.join(root, file), 'utf8')
     for (const banned of [/\bdelivered\b/i, /\bsent\b/i, /\breceived by\b/i, /✓/]) {
