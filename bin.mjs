@@ -18,6 +18,9 @@ import * as render from './lib/render.js'
 
 const appName = pkg.productName || pkg.name
 const isDev = path.basename(Bare.argv[0], path.extname(Bare.argv[0])) === 'bare'
+// Absolute, because the relay is launched through `open` on a Mac and
+// LaunchServices does not inherit this process's working directory.
+const entrypoint = isDev ? path.resolve(Bare.argv[1]) : null
 
 // paparam holds state per flag object, so every command gets its own copies
 const common = () => [
@@ -294,7 +297,7 @@ async function session (cmd, dir) {
   const client = await connect(dir, {
     publicKey: identity.publicKey,
     execPath: os.execPath(),
-    entrypoint: isDev ? Bare.argv[1] : null
+    entrypoint
   })
   return { dir, identity, client }
 }
@@ -302,7 +305,7 @@ async function session (cmd, dir) {
 function startUpdater (cmd, dir) {
   if (cmd.flags.updates === false) return
   try {
-    App.spawnUpdater(dir, os.execPath(), isDev ? Bare.argv[1] : null, updateWindow(cmd.flags.updateWindow))
+    App.spawnUpdater(dir, os.execPath(), entrypoint, updateWindow(cmd.flags.updateWindow))
   } catch {
     // no updates available here; never a reason to stop the command
   }
