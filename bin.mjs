@@ -1,4 +1,4 @@
-import { command, flag, arg, summary, description, rest } from 'paparam'
+import { command, flag, arg, summary, description } from 'paparam'
 import { persistent } from 'bare-storage'
 import process from 'bare-process'
 import os from 'bare-os'
@@ -11,9 +11,9 @@ import pkg from './package.json'
 import App from './app.js'
 import { loadIdentity, shortId } from './lib/identity.js'
 import { loadProfile, saveProfile } from './lib/profile.js'
-import { open as openStore } from './lib/store.js'
 import { create } from './lib/message.js'
-import { Relay, relayStatus, holdLock, releaseLock, writeState } from './lib/relay.js'
+import { connect } from './lib/client.js'
+import { liveStatus, runRelay, stopRelay } from './lib/relay.js'
 import * as render from './lib/render.js'
 
 const appName = pkg.productName || pkg.name
@@ -62,10 +62,13 @@ const me = command(
 const relay = command(
   'relay',
   summary('Whether the background relay is running'),
+  flag('--stop', 'stop the background relay'),
   flag('--foreground', 'run the relay here instead of reporting on it').hide(),
+  flag('--detached', 'log to relay.log instead of this terminal').hide(),
+  flag('--no-swarm', 'run the relay without joining the network').hide(),
   flag('--say <note>', 'publish a note before relaying').hide(),
   ...common(),
-  (cmd) => { run = () => (cmd.flags.foreground ? foregroundRelay(cmd) : showRelay(cmd)) }
+  (cmd) => { run = () => relayCommand(cmd) }
 )
 
 const cmd = command(
@@ -107,101 +110,122 @@ if (run !== null) {
 // ------------------------------------------------------------------ commands
 
 async function checkIn (cmd, status) {
-  const { dir, identity, store } = await session(cmd)
-  try {
-    const profile = await ensureProfile(dir)
-    const note = (cmd.args?.note || '').trim() || (status === 'alert' ? 'needs help' : 'all good')
-    const message = create({ name: profile.name, status, note, zone: profile.zone }, identity)
-    await store.put(message)
+  applyColour(cmd)
+  const dir = dirFor(cmd)
 
-    const relay = relayStatus(dir)
-    console.log(render.checkIn({ status, peers: relay.peers }))
-    if (!relay.alive) {
-      console.log(render.relayReport(relay).trimEnd())
-      console.log()
-    }
+  // asked before anything opens the store, because it can block on a person
+  // typing and the relay wants that lock
+  const profile = await ensureProfile(dir)
+  const { identity, client } = await session(cmd, dir)
+
+  let result = null
+  try {
+    const note = (cmd.args?.note || '').trim() || (status === 'alert' ? 'needs help' : 'all good')
+    result = await client.put(create({ name: profile.name, status, note, zone: profile.zone }, identity))
   } finally {
-    await store.close()
+    await client.close()
+  }
+
+  if (client.mode === 'unreachable' || result === 'unreachable') {
+    return console.log(render.relayStuck(client.relay))
+  }
+
+  console.log(render.checkIn({ status, peers: client.relay.peers }))
+  if (client.relay.alive === false) {
+    console.log(render.relayReport(client.relay, { attempted: true }).trimEnd())
+    console.log()
   }
 }
 
 async function showRoster (cmd) {
-  const { dir, store } = await session(cmd)
+  applyColour(cmd)
+  const dir = dirFor(cmd)
+  const { client } = await session(cmd, dir)
+
+  let messages = []
+  const who = cmd.args?.who || null
   try {
-    const who = cmd.args?.who || null
-    const messages = store.list(who ? { name: who } : {})
-    console.log(render.roster(messages, {
-      columns: columnsFor(cmd),
-      query: who,
-      peers: relayStatus(dir).peers
-    }))
+    messages = await client.list(who ? { name: who } : {})
   } finally {
-    await store.close()
+    await client.close()
   }
+
+  if (client.mode === 'unreachable') return console.log(render.relayStuck(client.relay))
+
+  console.log(render.roster(messages, {
+    columns: columnsFor(cmd),
+    query: who,
+    peers: client.relay.peers
+  }))
 }
 
 async function showMe (cmd) {
-  const { dir, identity, store } = await session(cmd)
-  try {
-    console.log(render.me({
-      id: shortId(identity.publicKey),
-      profile: loadProfile(dir),
-      stats: store.stats(),
-      relay: relayStatus(dir)
-    }))
-  } finally {
-    await store.close()
-  }
-}
-
-async function showRelay (cmd) {
   applyColour(cmd)
-  console.log(render.relayReport(relayStatus(dirFor(cmd))))
+  const dir = dirFor(cmd)
+  const { identity, client } = await session(cmd, dir)
+
+  try {
+    await client.refresh()
+  } finally {
+    await client.close()
+  }
+
+  if (client.mode === 'unreachable') return console.log(render.relayStuck(client.relay))
+
+  console.log(render.me({
+    id: shortId(identity.publicKey),
+    profile: loadProfile(dir),
+    stats: client.stats,
+    relay: client.relay
+  }))
 }
 
-// The body of the background process. Phase 7 spawns this detached.
-async function foregroundRelay (cmd) {
-  const { dir, identity, store } = await session(cmd)
-  const lock = holdLock(dir)
-  if (lock === null) {
-    console.log(render.relayReport(relayStatus(dir)))
-    await store.close()
+async function relayCommand (cmd) {
+  if (cmd.flags.foreground) return foregroundRelay(cmd)
+
+  applyColour(cmd)
+  const dir = dirFor(cmd)
+
+  if (cmd.flags.stop) {
+    const { stopped, pid, running } = await stopRelay(dir)
+    console.log('')
+    if (stopped) console.log(`Relay stopped (pid ${pid}).`)
+    else if (running) console.log(`Relay (pid ${pid}) was asked to stop and has not let go yet.`)
+    else console.log('No relay was running.')
+    console.log('')
     return
   }
 
-  await store.purge()
+  console.log(render.relayReport(await liveStatus(dir)))
+}
 
-  if (cmd.flags.say) {
-    const profile = loadProfile(dir) || { name: shortId(identity.publicKey), zone: 'unknown' }
-    await store.put(create({ name: profile.name, status: 'ok', note: cmd.flags.say, zone: profile.zone }, identity))
-    console.log(`[store] ${cmd.flags.say}`)
+// The body of the background process, and of `./peer` in the foreground.
+async function foregroundRelay (cmd) {
+  const dir = dirFor(cmd)
+  const detached = cmd.flags.detached === true
+  const output = detached ? new FileLog(path.join(dir, 'relay.log'), { maxSize: 1024 * 1024 }) : null
+  const log = detached ? new Console(output) : console
+
+  let node = null
+  try {
+    node = await runRelay(dir, {
+      log,
+      swarm: cmd.flags.swarm !== false,
+      say: cmd.flags.say ?? null
+    })
+  } catch (err) {
+    log.error(`[relay] ${err.message}`)
+    output?.close()
+    Bare.exit(1)
   }
 
-  const node = new Relay(store, {
-    onChange: (message) => console.log(`[recv] ${message.name} (${message.pk.slice(0, 8)}): ${message.note}`)
-  })
-  // written before joining, because flushing discovery takes a few seconds and
-  // `imok relay` should not report a live relay with an unknown pid meanwhile
-  const startedAt = Date.now()
-  writeState(dir, { pid: process.pid, peers: 0, startedAt })
-  await node.start()
-  console.log('[relay] joined the topic, waiting for peers')
-
-  const beat = setInterval(() => {
-    writeState(dir, { pid: process.pid, peers: node.peers, startedAt })
-    const stats = store.stats()
-    console.log(`[stat] peers=${node.peers} total=${stats.total} mine=${stats.mine} others=${stats.others}`)
-  }, 2000)
-
-  const stop = async (code) => {
-    clearInterval(beat)
-    await node.stop()
-    await store.close()
-    releaseLock(lock)
-    Bare.exit(code)
+  if (node === null) {
+    // another relay already holds the lock, which is the normal outcome of two
+    // commands racing to start one
+    if (detached) log.log('[relay] another relay is already running')
+    else console.log(render.relayReport(await liveStatus(dir)))
+    output?.close()
   }
-  process.on('SIGINT', () => stop(0))
-  process.on('SIGTERM', () => stop(0))
 }
 
 // ------------------------------------------------------------------ plumbing
@@ -229,13 +253,15 @@ function applyColour (cmd) {
   render.setColour(!off && tty.isatty(1))
 }
 
-async function session (cmd) {
-  applyColour(cmd)
-  const dir = dirFor(cmd)
+async function session (cmd, dir) {
   const identity = await loadIdentity(dir)
-  const store = await openStore(dir, { publicKey: identity.publicKey })
   startUpdater(cmd, dir)
-  return { dir, identity, store }
+  const client = await connect(dir, {
+    publicKey: identity.publicKey,
+    execPath: os.execPath(),
+    entrypoint: isDev ? Bare.argv[1] : null
+  })
+  return { dir, identity, client }
 }
 
 function startUpdater (cmd, dir) {

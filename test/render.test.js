@@ -114,6 +114,30 @@ test('nothing claims the message reached a person', (t) => {
   }
 })
 
+test('the relay report distinguishes never started from would not start', (t) => {
+  const idle = render.relayReport({ alive: false })
+  t.ok(idle.includes('not running'))
+  t.ok(idle.includes('starts on its own'), 'tells you how to get one')
+
+  const failed = render.relayReport({ alive: false }, { attempted: true })
+  t.ok(failed.includes('would not start'), 'does not claim it will start on its own')
+  t.ok(failed.includes('relay.log'), 'points at where the reason is')
+  t.ok(failed.includes('goes out on the next run'), 'says the check-in survived')
+
+  const up = render.relayReport({ alive: true, pid: 42, peers: 2, uptime: 61000 })
+  t.ok(up.includes('running (pid 42)'))
+  t.ok(up.includes('2 peers in range'))
+  t.absent(up.includes('starts on its own'), 'no advice when there is nothing to fix')
+})
+
+test('a relay that holds the store without answering is reported, not papered over', (t) => {
+  const stuck = render.relayStuck({ alive: true, pid: 7, peers: 0, uptime: 0 })
+  t.ok(stuck.includes('not answering'))
+  t.ok(stuck.includes('pid 7'))
+  t.ok(stuck.includes('Nothing was lost'), 'says what happened to the check-in')
+  t.ok(stuck.includes('imok relay --stop'), 'gives a way out')
+})
+
 test('no interface string in the source promises delivery', (t) => {
   const root = path.join(__dirname, '..')
   const files = ['bin.mjs', ...fs.readdirSync(path.join(root, 'lib')).map((f) => path.join('lib', f))]
