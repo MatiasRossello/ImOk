@@ -1,13 +1,13 @@
 #!/bin/sh
 # Run one peer in the foreground with its own storage.
-#   ./peer ana "estoy bien"    -> writes a message, then relays
+#   ./peer ana "estoy bien"    -> writes a note, then relays
 #   ./peer beto                -> relays only, writes nothing
 cd "$(dirname "$0")" || exit 1
 NAME="$1"
 [ -z "$NAME" ] && echo "usage: ./peer <name> [note]" && exit 1
 shift
 if [ -n "$1" ]; then
-  exec npx bare bin.mjs --no-updates --storage "/tmp/imok-$NAME" --relay --say "$*"
+  exec npx bare bin.mjs relay --foreground --no-updates --storage "/tmp/imok-$NAME" --say "$*"
 else
-  exec npx bare bin.mjs --no-updates --storage "/tmp/imok-$NAME" --relay
+  exec npx bare bin.mjs relay --foreground --no-updates --storage "/tmp/imok-$NAME"
 fi

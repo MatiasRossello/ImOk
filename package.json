@@ -28,6 +28,7 @@
     "bare-path": "^3.0.0",
     "bare-process": "^4.5.0",
     "bare-storage": "^1.1.0",
+    "bare-tty": "^5.1.2",
     "corestore": "^7.9.2",
     "fs-native-extensions": "^1.5.0",
     "hyperbee": "^2.27.3",
