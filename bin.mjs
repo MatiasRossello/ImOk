@@ -51,6 +51,8 @@ const list = command(
   'list',
   summary('Everything this device is carrying'),
   arg('[who]', 'only show names containing this text'),
+  flag('--watch|-w', 'live view that repaints as check-ins arrive'),
+  flag('--limit|-n <count>', `how many to show, newest first (default ${render.DEFAULT_LIMIT}, 0 for all)`),
   ...common(),
   (cmd) => { run = () => showRoster(cmd) }
 )
@@ -145,6 +147,8 @@ async function checkIn (cmd, status) {
 async function showRoster (cmd) {
   applyColour(cmd)
   const dir = dirFor(cmd)
+  if (cmd.flags.watch) return watchRoster(cmd, dir)
+
   const { client } = await session(cmd, dir)
 
   let messages = []
@@ -160,7 +164,8 @@ async function showRoster (cmd) {
   console.log(render.roster(messages, {
     columns: columnsFor(cmd),
     query: who,
-    peers: client.relay.peers
+    peers: client.relay.peers,
+    limit: limitFor(cmd)
   }))
 }
 
@@ -208,16 +213,18 @@ async function relayCommand (cmd) {
 }
 
 // Repaints the whole block on a timer. Ctrl+C has to put the cursor back or it
-// stays invisible in the terminal after we are gone.
-async function watchRelay (cmd, dir) {
-  const started = Date.now()
+// stays invisible in the terminal after we are gone. draw(stopped) returns the
+// text to paint; it is handed a check so a slow read cannot repaint over the
+// screen after the watch is already gone.
+async function repaint (draw, { every = 1000 } = {}) {
   let stopping = false
+  const stopped = () => stopping
 
   const paint = async () => {
     if (stopping) return
-    const relay = await liveStatus(dir)
+    const text = await draw(stopped)
     if (stopping) return
-    process.stdout.write(render.CLEAR + render.watch(relay, { started, columns: columnsFor(cmd) }) + '\n')
+    process.stdout.write(render.CLEAR + text + '\n')
   }
 
   const finish = () => {
@@ -233,7 +240,36 @@ async function watchRelay (cmd, dir) {
   process.stdout.write(render.HIDE_CURSOR)
 
   await paint()
-  const timer = setInterval(() => { paint().catch(() => {}) }, 1000)
+  const timer = setInterval(() => { paint().catch(() => {}) }, every)
+}
+
+function watchRelay (cmd, dir) {
+  const started = Date.now()
+  return repaint(async () => render.watch(await liveStatus(dir), { started, columns: columnsFor(cmd) }))
+}
+
+// The live roster. Ownership is the whole trick here: the opening session hands
+// the store over to a relay, and only then does the loop start asking over the
+// socket. A watch that kept the store open would sit there redrawing a store
+// nothing could sync into, which is the opposite of what it is for.
+async function watchRoster (cmd, dir) {
+  const started = Date.now()
+  const who = cmd.args?.who || null
+  const query = who ? { name: who } : {}
+
+  const opening = await session(cmd, dir)
+  await opening.client.close()
+
+  const client = await connect(dir, { publicKey: opening.identity.publicKey, spawn: false })
+
+  return repaint(async (stopped) => {
+    const messages = await client.list(query)
+    if (stopped()) return ''
+    const body = client.mode === 'unreachable'
+      ? render.relayStuck(client.relay)
+      : render.roster(messages, { columns: columnsFor(cmd), query: who, peers: client.relay.peers, limit: limitFor(cmd) })
+    return body + `watching · ${render.duration(Date.now() - started)}   ctrl+c to stop`
+  })
 }
 
 // The body of the background process, and of `./peer` in the foreground.
@@ -284,6 +320,17 @@ function columnsFor (cmd) {
     // not a terminal, fall through
   }
   return render.DEFAULT_COLUMNS
+}
+
+// 0 means all of them, which is the only way to ask for the whole roster from
+// a flag that otherwise takes a count.
+function limitFor (cmd) {
+  if (cmd.flags.limit === undefined) return render.DEFAULT_LIMIT
+  const count = Number(cmd.flags.limit)
+  if (Number.isSafeInteger(count) === false || count < 0) {
+    throw new Error('--limit must be a non-negative integer')
+  }
+  return count === 0 ? null : count
 }
 
 function applyColour (cmd) {

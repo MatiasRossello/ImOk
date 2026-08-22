@@ -187,3 +187,28 @@ test('relative times read the way a person would say them', (t) => {
   t.is(render.ago(now - 50 * 3600 * 1000, now), '2d ago')
   t.is(render.ago(now + 5000, now), 'just now', 'a clock slightly ahead does not read as the future')
 })
+
+test('the roster caps the rows without lying about the total', (t) => {
+  const now = 1700000000000
+  const many = []
+  for (let i = 0; i < 25; i++) {
+    many.push({ v: 1, name: 'peer' + i, status: 'ok', note: 'n', zone: 'z', ts: now - i * 1000, pk: 'a', sig: 'b' })
+  }
+
+  const capped = render.roster(many, { columns: 80, now, peers: 2 })
+  // anchored: the footer says "carried for 2 peers" and would count as a row
+  const rows = capped.split('\n').filter((line) => /^peer\d/.test(line))
+  t.is(rows.length, render.DEFAULT_LIMIT, 'draws only the default number of rows')
+  t.ok(capped.includes('peer0'), 'keeps the newest')
+  t.absent(capped.includes('peer24'), 'drops the oldest')
+  t.ok(capped.includes('last 10 of 25 check-ins'), 'the footer counts everything held, not what was drawn')
+
+  const all = render.roster(many, { columns: 80, now, peers: 2, limit: null })
+  t.is(all.split('\n').filter((line) => /^peer\d/.test(line)).length, 25, 'limit null draws them all')
+  t.ok(all.includes('25 check-ins'), 'and says so plainly')
+  t.absent(all.includes('last 25 of'), 'without claiming anything was hidden')
+
+  const under = render.roster(many.slice(0, 3), { columns: 80, now, peers: 1 })
+  t.ok(under.includes('3 check-ins'), 'a roster under the cap is not described as truncated')
+  t.absent(under.includes('last 3 of'), '')
+})

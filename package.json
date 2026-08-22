@@ -1,6 +1,6 @@
 {
   "name": "imok",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "description": "Peer-to-peer check-ins that survive the sender going offline.",
   "private": true,
   "bin": "bin.mjs",
