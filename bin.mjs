@@ -178,7 +178,8 @@ async function showMe (cmd) {
     id: shortId(identity.publicKey),
     profile: loadProfile(dir),
     stats: client.stats,
-    relay: client.relay
+    relay: client.relay,
+    version: pkg.version
   }))
 }
 
