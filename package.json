@@ -1,10 +1,10 @@
 {
   "name": "imok",
-  "version": "0.1.4",
+  "version": "1.4.0",
   "description": "Peer-to-peer check-ins that survive the sender going offline.",
   "private": true,
   "bin": "bin.mjs",
-  "upgrade": "pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko",
+  "upgrade": "pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto",
   "scripts": {
     "format": "prettier . --write",
     "test": "brittle-bare test/index.js",

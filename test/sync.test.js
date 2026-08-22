@@ -21,7 +21,7 @@ async function store (identity) {
 
 test('the topic is a fixed 32 byte hash of a constant', (t) => {
   t.is(TOPIC.byteLength, 32)
-  t.alike(TOPIC, crypto.hash(b4a.from('imok:v1:global')), 'derived from imok:v1:global')
+  t.alike(TOPIC, crypto.hash(b4a.from('imok:v2:global')), 'derived from imok:v2:global')
 })
 
 test('a message on one side turns up on the other', async (t) => {

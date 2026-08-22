@@ -1,147 +1,150 @@
 # imok
 
-> Check-ins peer to peer que sobreviven a que el emisor se quede sin conexión.
+_Español: [readmeES.md](readmeES.md)_
 
-`imok` es una CLI. Escribís que estás bien, o que necesitás ayuda, y el mensaje
-firmado queda guardado en tu máquina y en la de cualquiera que se te haya
-cruzado. Si te quedás sin batería, sin señal o sin máquina, el mensaje sigue
-viajando: lo llevan los otros.
+> Peer-to-peer check-ins that survive the sender going offline.
+
+`imok` is a CLI. You write that you are ok, or that you need help, and the signed
+message is stored on your machine and on the machine of anyone you cross paths
+with. If you run out of battery, out of signal or out of machine, the message
+keeps travelling: other people carry it.
 
 ```
-pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko
+pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto
 ```
 
-Construido para el Aleph Hackathon 2026 · Pears Track, a partir del template
-[`hello-pear-bare`](https://github.com/holepunchto/hello-pear-bare), branch
-**`variant/daemon`**.
+Built for the Aleph Hackathon 2026 · Pears Track, on top of the
+[`hello-pear-bare`](https://github.com/holepunchto/hello-pear-bare) template,
+branch **`variant/daemon`**.
 
 ---
 
-## Índice
+## Table of contents
 
-- [El problema](#el-problema)
-- [La idea](#la-idea)
-- [Tecnologías](#tecnologías)
-- [Instalación](#instalación)
-- [Uso](#uso)
-- [Cómo funciona](#cómo-funciona)
-  - [Identidad](#identidad)
-  - [Mensaje](#mensaje)
+- [The problem](#the-problem)
+- [The idea](#the-idea)
+- [Stack](#stack)
+- [Install](#install)
+- [Usage](#usage)
+- [How it works](#how-it-works)
+  - [Identity](#identity)
+  - [Message](#message)
   - [Store](#store)
-  - [Sincronización](#sincronización)
-  - [El relay](#el-relay)
-  - [Transportes](#transportes)
-  - [Bluetooth en macOS](#bluetooth-en-macos)
-  - [Actualizaciones OTA](#actualizaciones-ota)
-- [Estructura del proyecto](#estructura-del-proyecto)
-- [Desarrollo](#desarrollo)
-- [Publicar](#publicar)
-- [Limitaciones honestas](#limitaciones-honestas)
+  - [Sync](#sync)
+  - [The relay](#the-relay)
+  - [Transports](#transports)
+  - [Bluetooth on macOS](#bluetooth-on-macos)
+  - [OTA updates](#ota-updates)
+- [Project layout](#project-layout)
+- [Development](#development)
+- [Publishing](#publishing)
+- [Honest limitations](#honest-limitations)
 
 ---
 
-## El problema
+## The problem
 
-Cuando algo se corta —un temblor, un corte de luz, una tormenta, una zona sin
-cobertura— la primera pregunta es siempre la misma: _¿está bien?_
+When something breaks — a quake, a blackout, a storm, a dead zone — the first
+question is always the same: _are they ok?_
 
-Y justo ahí es cuando nada funciona. WhatsApp necesita internet. Un SMS necesita
-una antena. Cualquier app de check-in necesita un servidor al que llegar. Todas
-comparten el mismo defecto: **el mensaje solo existe mientras vos podés
-emitirlo**. Si tu teléfono muere después de escribir "estoy bien", ese "estoy
-bien" muere con él.
+And that is exactly when nothing works. WhatsApp needs the internet. An SMS needs
+a tower. Every check-in app needs a server to reach. They all share one flaw:
+**the message only exists while you are able to send it**. If your phone dies
+right after you type "I'm ok", that "I'm ok" dies with it.
 
-El caso peor no es no tener señal. Es tener señal _cinco segundos_, mandar el
-mensaje a alguien que está al lado tuyo, y que después ese alguien camine hasta
-donde sí hay red. Eso ninguna app lo hace, porque todas asumen que el emisor
-sigue vivo hasta que el servidor confirma.
+The worst case is not having no signal. It is having signal for _five seconds_,
+handing the message to someone standing next to you, and having that someone walk
+to where the network is. No app does that, because they all assume the sender is
+alive until the server confirms.
 
-## La idea
+## The idea
 
-Store and forward. Cada dispositivo lleva encima los mensajes de los demás.
+Store and forward. Every device carries everyone else's messages.
 
-1. Escribís tu check-in. Se firma con tu clave y se guarda **local**.
-2. Cualquier peer que aparezca —por internet o por Bluetooth— se lo lleva.
-3. Ese peer lo reenvía a los que se cruce después. **No es tu mensaje, y lo
-   lleva igual.**
-4. Vos podés apagar la máquina. El mensaje ya no depende de vos.
+1. You write your check-in. It is signed with your key and stored **locally**.
+2. Any peer that shows up — over the internet or over Bluetooth — takes a copy.
+3. That peer forwards it to whoever it meets next. **It is not their message, and
+   they carry it anyway.**
+4. You can turn your machine off. The message no longer depends on you.
 
-La firma ed25519 es lo que hace que esto no sea un teléfono descompuesto:
-cualquiera puede llevar tu mensaje, nadie puede modificarlo ni inventar uno a
-tu nombre.
+The ed25519 signature is what keeps this from being a game of telephone: anyone
+can carry your message, nobody can alter it or invent one in your name.
 
-El relay de fondo **es** el producto. La CLI es solo la ventana para hablarle.
+The background relay **is** the product. The CLI is just the window you use to
+talk to it.
 
-## Tecnologías
+## Stack
 
-Todo el runtime es del stack [Holepunch](https://holepunch.to). No hay servidor,
-no hay backend, no hay base de datos alojada en ningún lado.
+The whole runtime is [Holepunch](https://holepunch.to). No server, no backend, no
+database hosted anywhere.
 
-| Pieza                                                                                                        | Para qué                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| [Bare](https://github.com/holepunchto/bare)                                                                  | Runtime JavaScript. No es Node: `bare-fs`, `bare-path`, `bare-process`, `bare-pipe`, `bare-tty`, `bare-os` |
-| [Pear](https://docs.pears.com)                                                                               | Distribución P2P y actualizaciones OTA sobre un link `pear://`                                             |
-| [`pear-runtime`](https://github.com/holepunchto/pear-runtime)                                                | El updater propiamente dicho                                                                               |
-| [`bare-daemon`](https://github.com/holepunchto/bare-daemon)                                                  | Procesos desprendidos: el updater y el relay                                                               |
-| [Hyperswarm](https://github.com/holepunchto/hyperswarm)                                                      | Descubrimiento y conexión de peers por DHT, con hole punching                                              |
-| [`ble-swarm`](https://github.com/holepunchto/ble-swarm)                                                      | El mismo swarm, pero sobre Bluetooth LE, para cuando no hay red                                            |
-| [Hypercore / Corestore / Hyperbee](https://github.com/holepunchto/hyperbee)                                  | Persistencia local append-only con índice B-tree                                                           |
-| [`hypercore-crypto`](https://github.com/holepunchto/hypercore-crypto)                                        | ed25519: keypair, firma, verificación, hashing                                                             |
-| [`b4a`](https://github.com/holepunchto/b4a)                                                                  | Buffers portables (no existe `Buffer` en Bare)                                                             |
-| [`paparam`](https://github.com/holepunchto/paparam)                                                          | Parseo de argumentos                                                                                       |
-| [`fs-native-extensions`](https://github.com/holepunchto/fs-native-extensions)                                | Locks de archivo avisorios, que es cómo se sabe si hay un relay vivo                                       |
-| [`bare-build`](https://github.com/holepunchto/bare-build)                                                    | Binarios standalone, cross-compilados, para las seis plataformas                                           |
-| [brittle](https://github.com/holepunchto/brittle) + [lunte](https://github.com/holepunchto/lunte) + prettier | Tests, lint, formato                                                                                       |
+| Piece                                                                                                        | What for                                                                                          |
+| ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| [Bare](https://github.com/holepunchto/bare)                                                                  | JavaScript runtime. Not Node: `bare-fs`, `bare-path`, `bare-process`, `bare-pipe`, `bare-tty`, `bare-os` |
+| [Pear](https://docs.pears.com)                                                                               | P2P distribution and OTA updates over a `pear://` link                                            |
+| [`pear-runtime`](https://github.com/holepunchto/pear-runtime)                                                | The updater itself                                                                                |
+| [`bare-daemon`](https://github.com/holepunchto/bare-daemon)                                                  | Detached processes: the updater and the relay                                                     |
+| [Hyperswarm](https://github.com/holepunchto/hyperswarm)                                                      | Peer discovery and connection over the DHT, with hole punching                                    |
+| [`ble-swarm`](https://github.com/holepunchto/ble-swarm)                                                      | The same swarm, over Bluetooth LE, for when there is no network                                   |
+| [Hypercore / Corestore / Hyperbee](https://github.com/holepunchto/hyperbee)                                  | Local append-only persistence with a B-tree index                                                 |
+| [`hypercore-crypto`](https://github.com/holepunchto/hypercore-crypto)                                        | ed25519: keypair, signing, verification, hashing                                                  |
+| [`b4a`](https://github.com/holepunchto/b4a)                                                                  | Portable buffers (there is no `Buffer` in Bare)                                                   |
+| [`paparam`](https://github.com/holepunchto/paparam)                                                          | Argument parsing                                                                                  |
+| [`fs-native-extensions`](https://github.com/holepunchto/fs-native-extensions)                                | Advisory file locks, which is how a live relay is detected                                        |
+| [`bare-build`](https://github.com/holepunchto/bare-build)                                                    | Standalone binaries, cross-compiled, for all six platforms                                        |
+| [brittle](https://github.com/holepunchto/brittle) + [lunte](https://github.com/holepunchto/lunte) + prettier | Tests, lint, formatting                                                                           |
 
-**Sin dependencias de UI.** El render ANSI está escrito a mano en `lib/render.js`
-—incluida la tabla, el medidor de peers y el ancho de columna para emoji y CJK—
-porque `chalk`, `ink` y `blessed` no corren en Bare y porque una dependencia
-nativa haría imposible el binario standalone.
+**No UI dependencies.** The ANSI rendering is written by hand in `lib/render.js`
+— table, peer meter and column widths for emoji and CJK included — because
+`chalk`, `ink` and `blessed` do not run on Bare, and because a native dependency
+would make the standalone binary impossible.
 
-## Instalación
+## Install
 
-### Desde el link Pear (el camino real)
+### From the Pear link (the real path)
 
-En una máquina que nunca vio este repo:
+On a machine that has never seen this repo:
 
 ```sh
 curl https://install.pears.com/pear.sh | sh
-pear install pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko
+pear install pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto
 imok
 ```
 
-`pear install` baja únicamente el binario de tu plataforma (~78 MB de los ~390 MB
-que tiene el drive completo). **Requiere que haya un `pear seed` vivo del otro
-lado**: sin un peer sirviendo el drive no hay de dónde bajar.
+`pear install` only pulls the binary for your platform (~78 MB out of the ~390 MB
+the full drive holds). **It requires a live `pear seed` on the other side**:
+with no peer serving the drive there is nowhere to download from.
 
-Plataformas publicadas: `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`,
-`win32-x64`. No `win32-arm64`.
+Published platforms: all six — `darwin-arm64`, `darwin-x64`, `linux-arm64`,
+`linux-x64`, `win32-x64`, `win32-arm64`.
 
-### Desde el repo
+### From the repo
 
 ```sh
 npm install
-npm start                      # corre en dev, sin updates
-npm run make                   # binario standalone en out/<platform>-<arch>/
+npm start                      # dev run, no updates
+npm run make                   # standalone binary in out/<platform>-<arch>/
 ```
 
-Requiere `npm` (Node.js) y la CLI `pear` (`npx pear`).
+Requires `npm` (Node.js) and the `pear` CLI (`npx pear`).
 
-## Uso
+## Usage
 
-Cinco comandos. El primero es el que no se escribe.
+Five commands. The first one is the one you do not type.
 
 ```sh
-imok                        # check in: estoy bien
-imok alert "sin señal"      # check in: necesito ayuda
-imok list [texto]           # todo lo que este dispositivo está llevando
-imok me                     # tu identidad, tus estadísticas, tu relay
-imok relay                  # ¿está corriendo el relay de fondo?
-imok relay --watch          # vista viva de quién está en rango y por dónde llegó
-imok relay --stop           # bajarlo
+imok                        # check in: I'm ok
+imok alert "no signal"      # check in: I need help
+imok list [text]            # everything this device is carrying
+imok list --watch           # the live roster, repainted as check-ins arrive
+imok list --limit 50        # how many rows to draw (default 10, 0 for all)
+imok me                     # your identity, your stats, your relay
+imok relay                  # is the background relay running?
+imok relay --watch          # live view of who is in range and how they got here
+imok relay --stop           # take it down
 ```
 
-La primera vez pregunta dos cosas y no vuelve a preguntar nunca:
+The first run asks two things and never asks again:
 
 ```
 First run. Two questions, then never again.
@@ -152,7 +155,7 @@ First run. Two questions, then never again.
   Saved as Ana · Mendoza
 ```
 
-Un check-in:
+A check-in:
 
 ```
  ___  _  __  __    ___   _  __
@@ -166,7 +169,7 @@ I'm ok.
 ● Relayed to 3 peers
 ```
 
-Y cuando no hay nadie cerca, lo dice sin mentir:
+And when nobody is around, it says so without lying:
 
 ```
 ● Saved on your device
@@ -176,7 +179,7 @@ Y cuando no hay nadie cerca, lo dice sin mentir:
   goes out the moment one turns up. Nothing was thrown away.
 ```
 
-El padrón:
+The roster:
 
 ```
 WHO             STATE  WHEN      ZONE           NOTE
@@ -186,7 +189,7 @@ Matias Rossello ● ok   2m ago    Mendoza, Arge… all good
 Mateo D         ▲ help 11m ago   Mendoza        PRUEBA BT
 ```
 
-Y tu estado:
+And your own state:
 
 ```
 CUF99HQT
@@ -202,37 +205,37 @@ Bluetooth: waiting
 Version: 0.1.4
 ```
 
-Flags comunes a todos los comandos: `--storage <dir>`, `--no-updates`,
+Flags shared by every command: `--storage <dir>`, `--no-updates`,
 `--update-window <ms>`, `--columns <n>`, `--no-colour`.
 
-## Cómo funciona
+## How it works
 
 ```
-  imok (proceso efímero)                   relay (proceso de fondo, uno por storage)
+  imok (ephemeral process)                 relay (background process, one per storage)
   ┌────────────────────┐   unix socket    ┌──────────────────────────────────┐
-  │ parsea, pregunta,  │ ───────────────▶ │  Hyperbee  ← el único que la abre│
-  │ firma, imprime,    │ ◀─────────────── │  Hyperswarm ─── peers por DHT    │
-  │ se muere           │   relay.sock     │  ble-swarm  ─── peers por radio  │
+  │ parses, asks,      │ ───────────────▶ │  Hyperbee  ← the only opener     │
+  │ signs, prints,     │ ◀─────────────── │  Hyperswarm ─── peers over DHT   │
+  │ dies               │   relay.sock     │  ble-swarm  ─── peers over radio │
   └────────────────────┘                  └──────────────────────────────────┘
 ```
 
-### Identidad
+### Identity
 
-`lib/identity.js`. Un seed de 32 bytes en `identity.key`, modo `0600`, del que
-sale un keypair ed25519 determinístico. Se crea en el primer run y no se toca
-nunca más: si el archivo está corrupto el programa **se niega a seguir** en vez
-de generar uno nuevo, porque eso te cambiaría la identidad en silencio y dejaría
-huérfano cada mensaje que firmaste.
+`lib/identity.js`. A 32-byte seed in `identity.key`, mode `0600`, which yields a
+deterministic ed25519 keypair. It is created on the first run and never touched
+again: if the file is corrupt the program **refuses to continue** instead of
+generating a new one, because that would silently change your identity and orphan
+every message you ever signed.
 
-El ID corto (`CUF99HQT`) son los primeros 40 bits de la clave pública en base32
-sin `0`, `O`, `1` ni `I`, para que sobreviva a ser dictado por teléfono.
+The short ID (`CUF99HQT`) is the first 40 bits of the public key in base32 with no
+`0`, `O`, `1` or `I`, so it survives being read out over the phone.
 
-`verify()` nunca tira excepción. Corre sobre cada mensaje que llega de la red;
-cualquier basura es `false`, no un crash.
+`verify()` never throws. It runs on every message arriving from the network; any
+garbage is `false`, not a crash.
 
-### Mensaje
+### Message
 
-`lib/message.js`. Un objeto JSON de una línea, con tope de 512 bytes:
+`lib/message.js`. A one-line JSON object, capped at 512 bytes:
 
 ```json
 {
@@ -247,223 +250,224 @@ cualquier basura es `false`, no un crash.
 }
 ```
 
-La firma cubre un array serializado con orden de campos fijo, no el objeto. Eso
-lo hace independiente del orden de inserción de claves, que es lo que permite
-que dos peers calculen el mismo `id` (hash del payload) para el mismo contenido.
-El `id` es la unidad de deduplicación de todo el sistema.
+The signature covers a serialized array with a fixed field order, not the object.
+That makes it independent of key insertion order, which is what lets two peers
+compute the same `id` (hash of the payload) for the same content. The `id` is the
+deduplication unit of the whole system.
 
-`validate()` chequea en este orden, a propósito: forma → límites → ventana
-temporal → firma. La firma va última porque es la cara y las baratas ya
-descartaron casi toda la basura. Límites: nombre 40 B, nota 80 B, zona 40 B,
-tolerancia de reloj 5 min, TTL 72 h.
+`validate()` checks in this order, on purpose: shape → limits → time window →
+signature. The signature goes last because it is the expensive one and the cheap
+checks have already thrown out almost all the garbage. Limits: name 40 B, note
+80 B, zone 40 B, clock tolerance 5 min, TTL 72 h.
 
 ### Store
 
-`lib/store.js`. Hyperbee sobre Corestore es la copia durable; un `Map` en memoria
-reconstruido al abrir es el índice de trabajo. Con el tope de 5000 mensajes el
-store entero pesa ~2.5 MB, así que tenerlo en RAM regala orden, filtro y
-desalojo gratis.
+`lib/store.js`. Hyperbee over Corestore is the durable copy; an in-memory `Map`
+rebuilt on open is the working index. With the 5000-message cap the whole store
+weighs ~2.5 MB, so keeping it in RAM makes ordering, filtering and eviction free.
 
-Cuotas: 5000 mensajes en total, **50 por autor**, para que un peer que inunda no
-llene el store de nadie. Al llegar al tope se desaloja el más viejo. Los
-expirados se purgan cada hora.
+Quotas: 5000 messages total, **50 per author**, so a flooding peer cannot fill
+anyone else's store. At the cap the oldest is evicted. Expired ones are purged
+hourly.
 
-`put()` valida antes que nada, y es la única entrada al store. No hay otra.
+`put()` validates before anything else, and it is the only way into the store.
+There is no other.
 
-### Sincronización
+### Sync
 
-`lib/sync.js`. Anti-entropía simétrica: los dos lados corren el mismo código
-sobre la misma conexión, no hay cliente ni servidor.
-
-```
-  -> hello { v }         versión de protocolo
-  -> have  { ids }       todo lo que tengo, mío y ajeno por igual
-  <- want  { ids }       lo que a vos te falta
-  -> msg   { m }         un mensaje por línea
-```
-
-Una línea JSON por frame; `JSON.stringify` escapa los `\n` dentro de strings, así
-que una nota con salto de línea no puede romper el framing. Tope de 8 KB por
-línea, `have` en chunks de 200 ids. Un verbo desconocido se ignora, para que un
-peer más nuevo pueda agregar uno sin romper a los viejos.
-
-El reenvío es lo que hace la mula: cuando llega un mensaje nuevo, el relay se lo
-anuncia a **todos los demás peers conectados menos al que se lo contó**.
-
-### El relay
-
-`lib/relay.js`, el archivo más grande del proyecto, y el corazón.
-
-Solo un proceso puede tener el store abierto. Mientras el relay corre, ese
-proceso es el relay. Por eso cada comando habla por el socket local
-(`lib/ipc.js`) en vez de abrir el store, y solo lo abre él mismo cuando no hay
-relay a quien preguntarle —y en ese caso cede la propiedad al cerrar: primero el
-store, después el relay, nunca los dos a la vez (`lib/client.js`).
-
-**La vida del relay sale de un lock avisorio, no de un pid en un archivo.** Si lo
-matás con `-9`, el sistema operativo suelta el lock por vos, así que un archivo
-viejo nunca se confunde con un proceso vivo. Un reboot es el mismo caso: por eso
-un relay nunca vuelve como zombi.
-
-Tres estados posibles, y los tres se dicen tal cual son:
-
-- `relay` — hay uno vivo y contesta
-- `local` — no hay ninguno, este comando abre el store y arranca uno al salir
-- `unreachable` — el lock está tomado pero nadie contesta (arrancando o
-  muriendo). No se toca el store y se dice que no se pudo. **Nada finge que la
-  escritura ocurrió.**
-
-### Transportes
-
-Dos, en paralelo y con el mismo keypair, así un peer conocido por cualquiera de
-los dos caminos es reconociblemente el mismo peer:
-
-- **Hyperswarm**, sobre un topic global fijo (`hash('imok:v1:global')`). Fijo a
-  propósito en v1: o todos se encuentran en el mismo lugar, o la red se
-  particiona sin ninguna buena razón.
-- **BLE** vía `ble-swarm`, que es lo que sigue funcionando con el wifi apagado.
-  Arranca antes que la red y no depende de ella. Mientras hay peers por DHT
-  escanea con calma; cuando no hay ninguno, es la única salida y sale a cazar.
-
-Se usa `gatt` y no `l2cap` a propósito: l2cap es varias veces más rápido, pero
-un check-in tope 512 bytes y gatt se comporta igual en todas las plataformas.
-
-`imok me` muestra por dónde llegó cada peer, que es la única forma de ver desde
-adentro de la app que el camino offline es el que está haciendo el trabajo.
-
-### Bluetooth en macOS
-
-Esto costó un día entero, así que vale la pena contarlo.
-
-macOS le da el Bluetooth **a una app, no a un binario**. Un proceso cuyo
-`Info.plist` no declara `NSBluetoothAlwaysUsageDescription` lo mata TCC en el
-instante en que abre CoreBluetooth: SIGABRT, nada en stdout, nada en el log. Un
-binario standalone de Bare no tiene `Info.plist` en absoluto, así que la radio
-nunca levantaba y dos personas paradas una al lado de la otra nunca se veían.
-
-`lib/macapp.js` arma un `.app` mínimo dentro del storage, con el string en el
-plist y `LSUIElement` para que sea un agente de fondo (sin Dock, sin Cmd-Tab, sin
-barra de menú), copia el binario adentro, y lanza el relay con
-`/usr/bin/open -n -a`, que es lo único que hace que LaunchServices lea el plist.
-El bundle se rehace cuando el binario cambia, para que un OTA no quede corriendo
-la versión vieja para siempre.
-
-Si el bundle no levanta —política de la máquina, LaunchServices que lo rechaza,
-arranque en frío demasiado lento— se arranca un relay común con `--no-ble`. Un
-relay sin radio que lleva check-ins por la red le gana a una máquina sin relay.
-
-### Actualizaciones OTA
-
-`app.js`, tal como viene del template. Cada comando en primer plano dispara un
-updater desprendido con `bare-daemon` y se muere; el updater se queda esperando
-la ventana (30 s por defecto), consulta el link `upgrade` del `package.json` por
-el DHT, y si hay versión nueva la baja y la aplica. Un `updater.lock` garantiza
-uno solo por storage.
-
-El log está en `<storage>/updates.log`. El del relay, en `<storage>/relay.log`.
-
-Storage por defecto: el `persistent()` de `bare-storage` + `imok`. En dev,
-`/tmp/imok-dev` vía el wrapper `./imok`.
-
-## Estructura del proyecto
+`lib/sync.js`. Symmetric anti-entropy: both sides run the same code over the same
+connection, there is no client and no server.
 
 ```
-bin.mjs                    entrypoint, comandos, prompts, plumbing
-app.js                     daemon del updater (del template)
+  -> hello { v }         protocol version
+  -> have  { ids }       everything I hold, mine and other people's alike
+  <- want  { ids }       what you are missing
+  -> msg   { m }         one message per line
+```
+
+One JSON line per frame; `JSON.stringify` escapes `\n` inside strings, so a note
+with a line break cannot break the framing. 8 KB cap per line, `have` in chunks of
+200 ids. An unknown verb is ignored, so a newer peer can add one without breaking
+the old ones.
+
+Forwarding is what does the mule work: when a new message arrives, the relay
+announces it to **every other connected peer except the one that told it**.
+
+### The relay
+
+`lib/relay.js`, the largest file in the project, and the heart of it.
+
+Only one process can hold the store open. While the relay runs, that process is
+the relay. That is why every command talks over the local socket (`lib/ipc.js`)
+instead of opening the store, and only opens it itself when there is no relay to
+ask — and in that case it hands ownership over on the way out: store first, relay
+second, never both at once (`lib/client.js`).
+
+**The relay's liveness comes from an advisory lock, not from a pid in a file.** If
+you kill it with `-9`, the operating system drops the lock for you, so a stale
+file is never mistaken for a live process. A reboot is the same case: that is why
+a relay never comes back as a zombie.
+
+Three possible states, and all three are reported as they are:
+
+- `relay` — one is alive and answering
+- `local` — there is none; this command opens the store and starts one on the way
+  out
+- `unreachable` — the lock is held but nobody answers (starting up or dying). The
+  store is not touched and the failure is reported. **Nothing pretends the write
+  happened.**
+
+### Transports
+
+Two, in parallel and with the same keypair, so a peer known over either path is
+recognizably the same peer:
+
+- **Hyperswarm**, over a fixed global topic (`hash('imok:v1:global')`). Fixed on
+  purpose in v1: either everyone meets in the same place, or the network
+  partitions for no good reason.
+- **BLE** via `ble-swarm`, which is what keeps working with wifi off. It starts
+  before the network and does not depend on it. While there are DHT peers it
+  scans calmly; when there are none it is the only way out and it goes hunting.
+
+`gatt` is used instead of `l2cap` on purpose: l2cap is several times faster, but a
+check-in is 512 bytes at most and gatt behaves the same on every platform.
+
+`imok me` shows how each peer got here, which is the only way to see from inside
+the app that the offline path is the one doing the work.
+
+### Bluetooth on macOS
+
+This cost a full day, so it is worth writing down.
+
+macOS grants Bluetooth **to an app, not to a binary**. A process whose
+`Info.plist` does not declare `NSBluetoothAlwaysUsageDescription` is killed by TCC
+the instant it opens CoreBluetooth: SIGABRT, nothing on stdout, nothing in the
+log. A standalone Bare binary has no `Info.plist` at all, so the radio never came
+up and two people standing next to each other never saw one another.
+
+`lib/macapp.js` builds a minimal `.app` inside the storage, with the string in the
+plist and `LSUIElement` so it is a background agent (no Dock, no Cmd-Tab, no menu
+bar), copies the binary inside, and launches the relay with `/usr/bin/open -n -a`,
+which is the only thing that makes LaunchServices read the plist. The bundle is
+rebuilt when the binary changes, so an OTA does not leave the old version running
+forever.
+
+If the bundle does not come up — machine policy, LaunchServices refusing it, a
+cold start that is too slow — a plain relay is started with `--no-ble`. A relay
+with no radio carrying check-ins over the network beats a machine with no relay.
+
+### OTA updates
+
+`app.js`, exactly as it comes from the template. Every foreground command spawns a
+detached updater with `bare-daemon` and dies; the updater waits out the window
+(30 s by default), queries the `upgrade` link from `package.json` over the DHT,
+and if there is a new version it downloads and applies it. An `updater.lock`
+guarantees one per storage.
+
+The log lives in `<storage>/updates.log`. The relay's, in `<storage>/relay.log`.
+
+Default storage: `persistent()` from `bare-storage` + `imok`. In dev,
+`/tmp/imok-dev` via the `./imok` wrapper.
+
+## Project layout
+
+```
+bin.mjs                    entrypoint, commands, prompts, plumbing
+app.js                     updater daemon (from the template)
 lib/
-  identity.js              keypair persistente, firma, verificación, id corto
-  message.js               crear / codificar / validar / firmar — sin I/O
-  profile.js               nombre y zona, preguntados una vez
-  store.js                 Hyperbee + índice, dedup, TTL, cuotas — sin red
-  sync.js                  protocolo anti-entropía sobre una conexión
-  relay.js                 el daemon: lock, swarm, forward, ciclo de vida
-  ipc.js                   unix socket / named pipe, una línea por request
+  identity.js              persistent keypair, signing, verification, short id
+  message.js               create / encode / validate / sign — no I/O
+  profile.js               name and zone, asked once
+  store.js                 Hyperbee + index, dedup, TTL, quotas — no network
+  sync.js                  anti-entropy protocol over one connection
+  relay.js                 the daemon: lock, swarm, forward, lifecycle
+  ipc.js                   unix socket / named pipe, one line per request
   client.js                relay | local | unreachable
-  render.js                todo el ANSI, funciones puras, testeables sin TTY
-  macapp.js                el .app mínimo que le saca el permiso a macOS
-  transport/ble.js         ble-swarm, y null cuando no hay radio
-test/                      93 tests, 439 asserts
-scripts/make.js            selector de target de build
+  render.js                all the ANSI, pure functions, testable without a TTY
+  macapp.js                the minimal .app that gets the permission out of macOS
+  transport/ble.js         ble-swarm, and null when there is no radio
+test/                      94 tests, 448 asserts
+scripts/make.js            build target selector
 ```
 
-Dos reglas de estilo que el código respeta en todos lados: **la lógica pura no
-toca la red** (`message.js` y `store.js` no importan nada de transporte), y
-**todo error de red se traga y se loguea, nunca tumba el proceso**.
+Two style rules the code follows everywhere: **pure logic does not touch the
+network** (`message.js` and `store.js` import nothing from transport), and **every
+network error is swallowed and logged, never takes the process down**.
 
-## Desarrollo
+## Development
 
 ```sh
 npm install
 npm start                  # bare bin.mjs --no-updates
-npm test                   # 93 tests con brittle-bare
+npm test                   # 94 tests with brittle-bare
 npm run lint               # prettier --check && lunte
 npm run format             # prettier --write
-npm run make               # binario para tu plataforma
-npm run make:linux-x64     # o cualquiera de los seis targets, cross-compila bien
+npm run make               # binary for your platform
+npm run make:linux-x64     # or any of the six targets, cross-compiles fine
 ```
 
-Wrappers para probar sin escribir los flags largos:
+Wrappers for testing without typing the long flags:
 
 ```sh
-./imok list                          # storage descartable en /tmp/imok-dev
-IMOK_STORAGE=/tmp/otro ./imok me     # otro storage, otro peer
-./peer ana "estoy bien"              # un relay en primer plano, con su storage
-./peer beto                          # otro, que solo lleva
+./imok list                          # throwaway storage in /tmp/imok-dev
+IMOK_STORAGE=/tmp/other ./imok me    # another storage, another peer
+./peer ana "I'm ok"                  # a relay in the foreground, with its own storage
+./peer beto                          # another one, that only carries
 ```
 
-Dos peers en la misma máquina necesitan **storages separados**. Si comparten uno,
-vas a ver bugs fantasma toda la noche.
+Two peers on the same machine need **separate storages**. If they share one, you
+will be chasing ghost bugs all night.
 
-Para probar el camino offline sin dos máquinas: `--no-swarm` corre el relay solo
-con Bluetooth.
+To test the offline path without two machines: `--no-swarm` runs the relay on
+Bluetooth alone.
 
-## Publicar
+## Publishing
 
-`pear install` lee `by-arch/<platform>/app/<name>` del drive, así que stagear el
-código fuente no alcanza y nunca instala. **El artefacto es el binario
-compilado.**
+`pear install` reads `by-arch/<platform>/app/<name>` from the drive, so staging the
+source tree is not enough and never installs. **The artifact is the compiled
+binary.**
 
 ```sh
-npm run make:darwin-arm64      # y los demás targets que quieras
+npm run make:darwin-arm64      # and whichever other targets you want
 
 pear build --target /tmp/pear-deploy --package ./package.json \
   --darwin-arm64-app ./out/darwin-arm64/imok \
   --darwin-x64-app   ./out/darwin-x64/imok \
   --linux-arm64-app  ./out/linux-arm64/imok \
   --linux-x64-app    ./out/linux-x64/imok \
-  --win32-x64-app    ./out/win32-x64/imok.exe
+  --win32-x64-app    ./out/win32-x64/imok.exe \
+  --win32-arm64-app  ./out/win32-arm64/imok.exe
 
-pear stage pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko /tmp/pear-deploy
-pear seed  pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko   # tiene que quedar corriendo
+pear stage pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto /tmp/pear-deploy
+pear seed  pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto   # must stay running
 ```
 
-Pear 3.2.0 no tiene `pear release`. `pear build` + `pear stage` + un `pear seed`
-vivo es todo el camino de publicación hoy. Ver [PEAR-LINK.md](PEAR-LINK.md).
+Pear 3.2.0 has no `pear release`. `pear build` + `pear stage` + a live `pear seed`
+is the whole publish path today. See [PEAR-LINK.md](PEAR-LINK.md).
 
-## Limitaciones honestas
+## Honest limitations
 
-Esto importa más que la lista de features.
+This matters more than the feature list.
 
-- **No hay garantía de entrega.** Nadie confirma nada. Si no aparece ningún peer,
-  el mensaje se queda en tu máquina —y la app te lo dice con esas palabras.
-- **No es un sistema de alerta temprana.** No llama a nadie, no suena, no
-  despierta a nadie. Es un padrón que viaja.
-- **La identidad es débil.** La firma prueba que dos mensajes son de la misma
-  clave, no que esa clave sea quien dice ser. No hay directorio, no hay
-  verificación, no hay recuperación: si perdés `identity.key`, perdiste esa
-  identidad.
-- **El padrón es público.** Todo peer que se conecte recibe todos los mensajes
-  que llevás, con nombre, zona y nota. No hay cifrado de contenido ni
-  destinatarios: el reenvío indiscriminado es precisamente el mecanismo.
-- **La zona es texto libre.** No hay GPS, y "Mendoza" es lo que la persona
-  escribió, no algo verificado.
-- **Un topic global.** Todos en la misma red. No escala a mucha gente y no está
-  pensado para eso.
-- **TTL de 72 h.** Después de eso el mensaje se purga en todos lados.
-- **Bluetooth solo en macOS, iOS y Android**, que es lo que `bare-bluetooth`
-  bindea. En el resto la app corre igual y se cae a Hyperswarm en silencio.
-- **`win32-arm64` no está publicado.**
+- **No delivery guarantee.** Nobody acknowledges anything. If no peer shows up,
+  the message stays on your machine — and the app tells you so in those words.
+- **This is not an early warning system.** It calls nobody, it makes no sound, it
+  wakes nobody up. It is a roster that travels.
+- **Identity is weak.** The signature proves two messages come from the same key,
+  not that the key is who it claims to be. There is no directory, no verification,
+  no recovery: lose `identity.key` and that identity is gone.
+- **The roster is public.** Every peer that connects receives every message you
+  are carrying, with name, zone and note. There is no content encryption and no
+  recipients: indiscriminate forwarding is precisely the mechanism.
+- **The zone is free text.** There is no GPS, and "Mendoza" is what the person
+  typed, not something verified.
+- **One global topic.** Everyone on the same network. It does not scale to many
+  people and it is not meant to.
+- **72 h TTL.** After that the message is purged everywhere.
+- **Bluetooth only on macOS, iOS and Android**, which is what `bare-bluetooth`
+  binds. Everywhere else the app runs the same and falls back to Hyperswarm
+  silently.
 
-## Licencia
+## License
 
-Apache-2.0. Ver [LICENSE](LICENSE) y [NOTICE](NOTICE).
+Apache-2.0. See [LICENSE](../LICENSE) and [NOTICE](../NOTICE).
