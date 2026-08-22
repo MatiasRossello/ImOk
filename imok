@@ -1,0 +1,12 @@
+#!/bin/sh
+# Dev wrapper: runs the CLI against a throwaway storage so you can poke at it
+# without touching the real one.
+#   ./imok              check in as ok
+#   ./imok alert "..."  check in asking for help
+#   ./imok list         what this device is carrying
+#   ./imok me           your identity and stats
+#   ./imok relay        is the background relay up
+#
+# Override the storage with IMOK_STORAGE=/tmp/other ./imok list
+cd "$(dirname "$0")" || exit 1
+exec npx bare bin.mjs "$@" --no-updates --storage "${IMOK_STORAGE:-/tmp/imok-dev}"
