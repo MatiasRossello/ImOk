@@ -41,7 +41,7 @@ let closed = false
 
 const alert = command(
   'alert',
-  summary('Check in asking for help'),
+  summary("Check in as I need help"),
   arg('[note]', 'a short note to travel with it'),
   ...common(),
   (cmd) => { run = () => checkIn(cmd, 'alert') }
@@ -79,7 +79,7 @@ const relay = command(
 const cmd = command(
   appName,
   summary(pkg.description),
-  description('Run with no command to check in as ok.'),
+  description("Run with no command to check in as I'm ok."),
   flag('--version|-v', 'Print the current version'),
   flag('--updater', 'run updater daemon').hide(),
   ...common(),

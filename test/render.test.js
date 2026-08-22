@@ -98,6 +98,25 @@ test('the three states are worded exactly one way', (t) => {
   t.ok(render.checkIn({ status: 'ok', peers: 1 }).includes('1 peer'), 'singular')
 })
 
+test('the banner fits the narrowest terminal the app promises to support', (t) => {
+  for (const status of ['ok', 'alert']) {
+    const out = render.checkIn({ status, peers: 2 })
+    const widest = Math.max(...out.split('\n').map((line) => render.displayWidth(line)))
+    t.ok(widest <= render.MIN_COLUMNS, `${status} banner -> widest line ${widest}`)
+  }
+})
+
+test('a check-in speaks in the first person', (t) => {
+  t.ok(render.checkIn({ status: 'ok', peers: 1 }).includes("I'm ok."))
+  t.ok(render.checkIn({ status: 'alert', peers: 1 }).includes('I need help.'))
+})
+
+test('the state column reads at a glance without widening', (t) => {
+  const out = render.roster(sample, { columns: 80, now, peers: 2 })
+  t.ok(out.includes('▲ help'), 'the urgent one carries a mark of its own')
+  t.ok(out.includes('● ok'), 'and the ordinary one the same bullet as the check-in')
+})
+
 test('nothing claims the message reached a person', (t) => {
   const outputs = [
     render.checkIn({ status: 'ok', peers: 0 }),
