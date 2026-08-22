@@ -63,6 +63,7 @@ const relay = command(
   'relay',
   summary('Whether the background relay is running'),
   flag('--stop', 'stop the background relay'),
+  flag('--watch|-w', 'live view of who is in range and how they got here'),
   flag('--foreground', 'run the relay here instead of reporting on it').hide(),
   flag('--detached', 'log to relay.log instead of this terminal').hide(),
   flag('--no-swarm', 'run the relay without joining the network').hide(),
@@ -131,7 +132,7 @@ async function checkIn (cmd, status) {
     return console.log(render.relayStuck(client.relay))
   }
 
-  console.log(render.checkIn({ status, peers: client.relay.peers }))
+  console.log(render.checkIn({ status, peers: client.relay.peers, reach: client.relay.reach }))
   if (client.relay.alive === false) {
     console.log(render.relayReport(client.relay, { attempted: true }).trimEnd())
     console.log()
@@ -197,7 +198,38 @@ async function relayCommand (cmd) {
     return
   }
 
+  if (cmd.flags.watch) return watchRelay(cmd, dir)
+
   console.log(render.relayReport(await liveStatus(dir)))
+}
+
+// Repaints the whole block on a timer. Ctrl+C has to put the cursor back or it
+// stays invisible in the terminal after we are gone.
+async function watchRelay (cmd, dir) {
+  const started = Date.now()
+  let stopping = false
+
+  const paint = async () => {
+    if (stopping) return
+    const relay = await liveStatus(dir)
+    if (stopping) return
+    process.stdout.write(render.CLEAR + render.watch(relay, { started, columns: columnsFor(cmd) }) + '\n')
+  }
+
+  const finish = () => {
+    if (stopping) return
+    stopping = true
+    clearInterval(timer)
+    process.stdout.write(render.SHOW_CURSOR + '\n')
+    Bare.exit(0)
+  }
+
+  process.on('SIGINT', finish)
+  process.on('SIGTERM', finish)
+  process.stdout.write(render.HIDE_CURSOR)
+
+  await paint()
+  const timer = setInterval(() => { paint().catch(() => {}) }, 1000)
 }
 
 // The body of the background process, and of `./peer` in the foreground.

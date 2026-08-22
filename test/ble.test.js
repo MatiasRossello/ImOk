@@ -147,3 +147,75 @@ test('the bluetooth line says what the radio says, and nothing more', (t) => {
   t.ok(company.includes('2 peers nearby'))
   t.absent(company.includes('wifi off'), 'no advice once it is doing its job')
 })
+
+// ------------------------------------------------- seeing it work with no wifi
+
+const UP = { alive: true, pid: 42, uptime: 61000, bluetooth: { state: 'on', peers: 1 } }
+
+test('the reach breakdown says which radio carried each peer', (t) => {
+  const offline = render.reachLines({ ...UP, peers: 2, reach: { network: 0, bluetooth: 2 } }).join('\n')
+  t.ok(offline.includes('2 nearby over Bluetooth'))
+  t.ok(offline.includes('no network needed'))
+  t.ok(offline.includes('nothing but Bluetooth right now'), 'names the offline case outright')
+
+  const mixed = render.reachLines({ ...UP, peers: 3, reach: { network: 2, bluetooth: 1 } }).join('\n')
+  t.ok(mixed.includes('1 nearby over Bluetooth'))
+  t.ok(mixed.includes('2 over the network'))
+  t.absent(mixed.includes('nothing but Bluetooth'), 'not the offline case')
+
+  t.alike(render.reachLines({ ...UP, peers: 0 }), [], 'a relay too old to report reach says nothing')
+})
+
+test('the check-in qualifies its peer count without growing a fourth state', (t) => {
+  const bullets = (out) => out.split('\n').filter((l) => l.startsWith('●')).length
+
+  const offline = render.checkIn({ status: 'ok', peers: 2, reach: { network: 0, bluetooth: 2 } })
+  t.ok(offline.includes('Relayed to 2 peers, all nearby over Bluetooth'))
+  t.is(bullets(offline), 2, 'still Saved and Relayed, nothing else')
+
+  const one = render.checkIn({ status: 'ok', peers: 1, reach: { network: 0, bluetooth: 1 } })
+  t.ok(one.includes('Relayed to 1 peer, nearby over Bluetooth'))
+
+  const mixed = render.checkIn({ status: 'ok', peers: 3, reach: { network: 2, bluetooth: 1 } })
+  t.ok(mixed.includes('Relayed to 3 peers, 1 nearby over Bluetooth'))
+
+  const wired = render.checkIn({ status: 'ok', peers: 2, reach: { network: 2, bluetooth: 0 } })
+  t.ok(wired.includes('Relayed to 2 peers'))
+  t.absent(wired.includes('Bluetooth'), 'no bluetooth noise when it carried nothing')
+
+  const old = render.checkIn({ status: 'ok', peers: 2 })
+  t.ok(old.includes('Relayed to 2 peers'), 'no reach at all is still a valid check-in')
+})
+
+test('the live view calls the offline case by its name', (t) => {
+  const offline = render.watch({ ...UP, peers: 1, reach: { network: 0, bluetooth: 1 } }, { columns: 72 })
+  t.ok(offline.includes('1 peer in range'))
+  t.ok(offline.includes('Everything you are carrying arrived over Bluetooth'))
+  t.ok(offline.includes('did not need one'))
+  t.ok(offline.includes('ctrl+c to stop'))
+
+  const empty = render.watch({ ...UP, peers: 0, reach: { network: 0, bluetooth: 0 } }, { columns: 72 })
+  t.ok(empty.includes('Nobody in range yet, on either path'))
+  t.absent(empty.includes('arrived over Bluetooth'), 'claims nothing with nobody around')
+
+  const mixed = render.watch({ ...UP, peers: 3, reach: { network: 2, bluetooth: 1 } }, { columns: 72 })
+  t.absent(mixed.includes('Everything you are carrying'), 'not everything came over BLE')
+
+  const down = render.watch({ alive: false }, { columns: 72 })
+  t.ok(down.includes('No relay running'))
+  t.ok(down.includes('ctrl+c to stop'), 'the footer survives the empty case')
+})
+
+test('the live view fits whatever terminal it is given', (t) => {
+  for (const columns of [60, 80, 200]) {
+    const out = render.watch({ ...UP, peers: 40, reach: { network: 20, bluetooth: 20 } }, { columns })
+    const widest = Math.max(...out.split('\n').map((l) => render.displayWidth(l)))
+    t.ok(widest <= Math.max(columns, render.MIN_COLUMNS), `fits at ${columns} (widest ${widest})`)
+  }
+})
+
+test('the meter saturates instead of running off the line', (t) => {
+  const huge = render.meter('Bluetooth', 9999, 80)
+  t.ok(render.displayWidth(huge) <= 80, 'a busy relay does not wrap')
+  t.ok(huge.includes('9999'), 'the real count is still shown')
+})
