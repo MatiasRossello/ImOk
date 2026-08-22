@@ -1,5 +1,7 @@
 # imok
 
+_English: [README.md](README.md)_
+
 > Check-ins peer to peer que sobreviven a que el emisor se quede sin conexión.
 
 `imok` es una CLI. Escribís que estás bien, o que necesitás ayuda, y el mensaje
@@ -135,6 +137,8 @@ Cinco comandos. El primero es el que no se escribe.
 imok                        # check in: estoy bien
 imok alert "sin señal"      # check in: necesito ayuda
 imok list [texto]           # todo lo que este dispositivo está llevando
+imok list --watch           # el padrón en vivo, repintado cuando llega algo
+imok list --limit 50        # cuántas filas mostrar (default 10, 0 son todas)
 imok me                     # tu identidad, tus estadísticas, tu relay
 imok relay                  # ¿está corriendo el relay de fondo?
 imok relay --watch          # vista viva de quién está en rango y por dónde llegó
@@ -382,7 +386,7 @@ lib/
   render.js                todo el ANSI, funciones puras, testeables sin TTY
   macapp.js                el .app mínimo que le saca el permiso a macOS
   transport/ble.js         ble-swarm, y null cuando no hay radio
-test/                      93 tests, 439 asserts
+test/                      94 tests, 448 asserts
 scripts/make.js            selector de target de build
 ```
 
@@ -395,7 +399,7 @@ toca la red** (`message.js` y `store.js` no importan nada de transporte), y
 ```sh
 npm install
 npm start                  # bare bin.mjs --no-updates
-npm test                   # 93 tests con brittle-bare
+npm test                   # 94 tests con brittle-bare
 npm run lint               # prettier --check && lunte
 npm run format             # prettier --write
 npm run make               # binario para tu plataforma
