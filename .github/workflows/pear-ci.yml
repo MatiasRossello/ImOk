@@ -1,0 +1,25 @@
+name: Publish with pear-ci
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: pear-ci
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: holepunchto/actions/pear-ci@main
+        with:
+          primary-key: ${{ secrets.PEAR_PRIMARY_KEY }}
+          namespace: imok
+          target: .
+          dry-run: true
