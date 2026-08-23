@@ -2,6 +2,11 @@
 
 _Español: [readmeES.md](readmeES.md)_
 
+Team:
+- Ignacio Wuilloud
+- Mateo De Luca
+- Matias Rossello
+
 > Peer-to-peer check-ins that survive the sender going offline.
 
 `imok` is a CLI. You write that you are ok, or that you need help, and the signed
