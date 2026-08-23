@@ -10,7 +10,7 @@ cruzado. Si te quedás sin batería, sin señal o sin máquina, el mensaje sigue
 viajando: lo llevan los otros.
 
 ```
-pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto
+pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko
 ```
 
 Construido para el Aleph Hackathon 2026 · Pears Track, a partir del template
@@ -108,7 +108,7 @@ En una máquina que nunca vio este repo:
 
 ```sh
 curl https://install.pears.com/pear.sh | sh
-pear install pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto
+pear install pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko
 imok
 ```
 
@@ -203,7 +203,7 @@ Relay: running (pid 56311), 3 peers in range, up 7s
   0 nearby over Bluetooth
   3 over the network
 Bluetooth: waiting
-Version: 0.1.4
+Version: 1.4.0
 ```
 
 Flags comunes a todos los comandos: `--storage <dir>`, `--no-updates`,
@@ -438,8 +438,8 @@ pear build --target /tmp/pear-deploy --package ./package.json \
   --win32-x64-app    ./out/win32-x64/imok.exe \
   --win32-arm64-app  ./out/win32-arm64/imok.exe
 
-pear stage pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto /tmp/pear-deploy
-pear seed  pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto   # tiene que quedar corriendo
+pear stage pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko /tmp/pear-deploy
+pear seed  pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko   # tiene que quedar corriendo
 ```
 
 Pear 3.2.0 no tiene `pear release`. `pear build` + `pear stage` + un `pear seed`

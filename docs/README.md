@@ -207,7 +207,7 @@ Relay: running (pid 56311), 3 peers in range, up 7s
   0 nearby over Bluetooth
   3 over the network
 Bluetooth: waiting
-Version: 0.1.4
+Version: 1.4.0
 ```
 
 Flags shared by every command: `--storage <dir>`, `--no-updates`,

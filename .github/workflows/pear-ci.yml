@@ -1,8 +1,11 @@
 name: Publish with pear-ci
 
+# Manual only. This workflow stages the SOURCE TREE, which `pear install` cannot
+# read: it needs by-arch/<platform>/app/<name>, i.e. the compiled binaries.
+# Until it runs `npm run make:*` + `pear build`, publishing goes through
+# docs/PEAR-LINK.md by hand. Re-enable the push trigger once it builds binaries.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write

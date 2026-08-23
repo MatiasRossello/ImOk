@@ -3,10 +3,10 @@
 **Keep this. You need it four times: `pear stage`, `pear seed`, the READMEs, and the hackathon submission form.**
 
 ```
-pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto
+pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko
 ```
 
-Key only: `phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto`
+Key only: `zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko`
 
 Generated with `pear touch`. It is also the `upgrade` field in `package.json`, which is
 what the updater daemon polls for OTA updates.
@@ -34,15 +34,15 @@ pear build --target /tmp/pear-deploy --package ./package.json \
   --win32-x64-app    ./out/win32-x64/imok.exe \
   --win32-arm64-app  ./out/win32-arm64/imok.exe
 
-pear stage pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto /tmp/pear-deploy
-pear seed  pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto   # must stay running
+pear stage pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko /tmp/pear-deploy
+pear seed  pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko   # must stay running
 ```
 
 On the clean machine, which must never have seen this repo:
 
 ```sh
 curl https://install.pears.com/pear.sh | sh
-pear install pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto
+pear install pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko
 imok
 ```
 
@@ -61,6 +61,6 @@ win32-arm64.
 
 | Version | Drive length | Link                                                              |
 | ------- | ------------ | ----------------------------------------------------------------- |
-| 1.0.0   | 8            | `pear://0.8.phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto` |
+| 1.0.0   | 8            | `pear://0.8.zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko` |
 
 The versioned link pins an exact checkout; the bare link always resolves to the latest.
