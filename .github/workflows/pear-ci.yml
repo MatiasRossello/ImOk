@@ -17,9 +17,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # pear-ci mirrors `target` verbatim -- it does not read pear.stage.ignore,
+      # so the drive gets whatever is in dist/ and nothing else.
+      - name: Build the staging directory
+        run: |
+          npm ci --omit=dev
+          mkdir -p dist
+          rsync -a \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=ci \
+            --exclude=dist \
+            --exclude=test \
+            --exclude=scripts \
+            --exclude=docs \
+            ./ dist/
+
       - uses: holepunchto/actions/pear-ci@main
         with:
           primary-key: ${{ secrets.PEAR_PRIMARY_KEY }}
           namespace: imok
-          target: .
+          target: dist
           dry-run: true
