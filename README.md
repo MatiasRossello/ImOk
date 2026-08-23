@@ -1,6 +1,6 @@
 # imok
 
-_Español: [readmeES.md](readmeES.md)_
+_Español: [readmeES.md](docs/readmeES.md)_
 
 Team:
 - Ignacio Wuilloud
@@ -448,7 +448,7 @@ pear seed  pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko   # must 
 ```
 
 Pear 3.2.0 has no `pear release`. `pear build` + `pear stage` + a live `pear seed`
-is the whole publish path today. See [PEAR-LINK.md](PEAR-LINK.md).
+is the whole publish path today. See [PEAR-LINK.md](docs/PEAR-LINK.md).
 
 ## Honest limitations
 
@@ -475,4 +475,4 @@ This matters more than the feature list.
 
 ## License
 
-Apache-2.0. See [LICENSE](../LICENSE) and [NOTICE](../NOTICE).
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

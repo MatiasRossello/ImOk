@@ -1,6 +1,6 @@
 # imok
 
-_English: [README.md](README.md)_
+_English: [README.md](../README.md)_
 
 > Check-ins peer to peer que sobreviven a que el emisor se quede sin conexión.
 
