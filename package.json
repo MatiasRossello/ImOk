@@ -4,7 +4,7 @@
   "description": "Peer-to-peer check-ins that survive the sender going offline.",
   "private": true,
   "bin": "bin.mjs",
-  "upgrade": "pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto",
+  "upgrade": "pear://ic6zc913y38qtinc19i3dwjmpaiu1fny4a66xmwms6wo6679i5cy",
   "scripts": {
     "format": "prettier . --write",
     "test": "brittle-bare test/index.js",

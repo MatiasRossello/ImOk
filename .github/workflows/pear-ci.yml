@@ -39,4 +39,4 @@ jobs:
           primary-key: ${{ secrets.PEAR_PRIMARY_KEY }}
           namespace: imok
           target: dist
-          dry-run: true
+          dry-run: false
