@@ -57,6 +57,7 @@
         "/.git",
         "/out",
         "/.github",
+        "/ci",
         "/node_modules/.cache",
         "/test",
         "/scripts",
