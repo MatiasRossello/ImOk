@@ -15,7 +15,7 @@ with. If you run out of battery, out of signal or out of machine, the message
 keeps travelling: other people carry it.
 
 ```
-pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto
+pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko
 ```
 
 Built for the Aleph Hackathon 2026 · Pears Track, on top of the
@@ -112,7 +112,7 @@ On a machine that has never seen this repo:
 
 ```sh
 curl https://install.pears.com/pear.sh | sh
-pear install pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto
+pear install pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko
 imok
 ```
 
@@ -443,8 +443,8 @@ pear build --target /tmp/pear-deploy --package ./package.json \
   --win32-x64-app    ./out/win32-x64/imok.exe \
   --win32-arm64-app  ./out/win32-arm64/imok.exe
 
-pear stage pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto /tmp/pear-deploy
-pear seed  pear://phwgcr6uk1frfmwcmgxjzr5ho4mw9gog98e6omi4s7y9e7yigeto   # must stay running
+pear stage pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko /tmp/pear-deploy
+pear seed  pear://zgw4h81xyucy7ehxb5cqw5rmyrtpgbqnhsnfoscp3yci1xy3kxko   # must stay running
 ```
 
 Pear 3.2.0 has no `pear release`. `pear build` + `pear stage` + a live `pear seed`
